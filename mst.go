@@ -6,10 +6,12 @@ import (
 )
 
 type MinimumSpanningTree struct {
-	MSTDataset    [][]float64
-	Iteration     int
-	NewCentroid   []float64
-	NewMSTDataset [][]float64
+	MSTDataset          [][]float64
+	Iteration           int
+	NewCentroid         []float64
+	NewNearestCentroid  []float64
+	NewFarthestCentroid []float64
+	NewMSTDataset       [][]float64
 }
 
 func RunMinimumSpanningTree() {
@@ -40,11 +42,12 @@ func RunMinimumSpanningTree() {
 	dataset = [][]float64{
 		{1.1, 60},
 		{8.2, 20},
-		{4.05, 37},
+		{4.2, 35},
 		{1.5, 21},
 		{7.6, 15},
 		{2, 55},
 	}
+
 	mst = MinimumSpanningTree{
 		MSTDataset: dataset,
 	}
@@ -52,11 +55,13 @@ func RunMinimumSpanningTree() {
 
 	dataset = [][]float64{
 		{1.1, 60},
-		{7.8999999999999995, 17.5},
-		{4.05, 37},
+		{8.2, 20},
+		{3.9, 39},
 		{1.5, 21},
+		{7.6, 15},
 		{2, 55},
 	}
+
 	mst = MinimumSpanningTree{
 		MSTDataset: dataset,
 	}
@@ -74,7 +79,9 @@ type MatrixDistance struct {
 
 func (m *MinimumSpanningTree) AverageDistanceClustering() {
 
-	var centroids []MatrixDistance
+	var (
+		centroids []MatrixDistance
+	)
 
 	for i, a := range m.MSTDataset {
 		// initiate matrix distance
@@ -85,6 +92,7 @@ func (m *MinimumSpanningTree) AverageDistanceClustering() {
 			if j == 0 {
 				matrixdistance.Diameter = append(matrixdistance.Diameter, 0)
 			} else if j > i {
+				// euclidean distance
 				diameter := math.Sqrt(((a[0] - b[0]) * (a[0] - b[0])) + ((a[1] - b[1]) * (a[1] - b[1])))
 				matrixdistance.Diameter = append(matrixdistance.Diameter, float64(int(diameter*100))/100)
 			}
@@ -109,10 +117,13 @@ func (m *MinimumSpanningTree) AverageDistanceClustering() {
 		fmt.Printf("\n")
 	}
 
-	var smallest float64
+	var (
+		smallest         float64
+		centroidname     []string
+		centroidselected []int
+	)
+
 	smallest = 100
-	var centroidname []string
-	var centroidselected []int
 
 	// get smallest centroid value
 	for i, value := range centroids {
@@ -132,10 +143,17 @@ func (m *MinimumSpanningTree) AverageDistanceClustering() {
 		}
 	}
 
+	// get nearest centroid value
+
+	// get farthest centroid value
+
 	// fmt.Printf("C%#v%#v. %#v\n", centroidname[0], centroidname[1], smallest)
 	fmt.Printf("selected centroid : %#v | %#v\n", centroidselected[0], centroidselected[1])
 
 	m.CalculateNewCentroid(m.MSTDataset[centroidselected[0]-1], m.MSTDataset[centroidselected[1]-1])
+	m.CalculateNewNearestCentroid(m.MSTDataset[centroidselected[0]-1], m.MSTDataset[centroidselected[1]-1])
+	m.CalculateNewFarthestCentroid(m.MSTDataset[centroidselected[0]-1], m.MSTDataset[centroidselected[1]-1])
+
 	// fmt.Printf("C%#v, %#v", m.MSTDataset[centroidselected[0]-1], m.MSTDataset[centroidselected[1]-1])
 
 	// m.CalculateNewTable(centroidname[0], centroidname[1])
@@ -145,10 +163,12 @@ func (m *MinimumSpanningTree) AverageDistanceClustering() {
 
 	if m.Iteration < len(m.MSTDataset) {
 
-		/* make new dataset table */
+		/* make new dataset table average distance */
 		var (
 			smallest_centroid_index int
 			newMSTDataset           [][]float64
+			newMSTNearestDataset    [][]float64
+			newMSTFarthestDataset   [][]float64
 		)
 		if centroidselected[0] < centroidselected[1] {
 			smallest_centroid_index = centroidselected[0] - 1
@@ -160,13 +180,162 @@ func (m *MinimumSpanningTree) AverageDistanceClustering() {
 			if i == smallest_centroid_index {
 				// append new
 				newMSTDataset = append(newMSTDataset, m.NewCentroid)
+				newMSTNearestDataset = append(newMSTNearestDataset, m.NewNearestCentroid)
+				newMSTFarthestDataset = append(newMSTFarthestDataset, m.NewFarthestCentroid)
 			} else if i != centroidselected[0]-1 && i != centroidselected[1]-1 {
 				newMSTDataset = append(newMSTDataset, ds)
+				newMSTNearestDataset = append(newMSTNearestDataset, ds)
+				newMSTFarthestDataset = append(newMSTFarthestDataset, ds)
 			}
 		}
 
 		fmt.Println("dataset = [][]float64{")
 		for _, ds := range newMSTDataset {
+			fmt.Printf("\t{%#v, %#v},\n", ds[0], ds[1])
+		}
+		fmt.Println("}")
+
+		fmt.Println("dataset = [][]float64{")
+		for _, ds := range newMSTNearestDataset {
+			fmt.Printf("\t{%#v, %#v},\n", ds[0], ds[1])
+		}
+		fmt.Println("}")
+
+		fmt.Println("dataset = [][]float64{")
+		for _, ds := range newMSTFarthestDataset {
+			fmt.Printf("\t{%#v, %#v},\n", ds[0], ds[1])
+		}
+		fmt.Println("}")
+	}
+
+}
+
+func (m *MinimumSpanningTree) NearestDistanceClustering() {
+
+	var (
+		centroids []MatrixDistance
+	)
+
+	for i, a := range m.MSTDataset {
+		// initiate matrix distance
+		var matrixdistance MatrixDistance
+		matrixdistance.Name = []string{fmt.Sprintf("%#v", i+1)}
+
+		for j, b := range m.MSTDataset {
+			if j == 0 {
+				matrixdistance.Diameter = append(matrixdistance.Diameter, 0)
+			} else if j > i {
+				// euclidean distance
+				diameter := math.Sqrt(((a[0] - b[0]) * (a[0] - b[0])) + ((a[1] - b[1]) * (a[1] - b[1])))
+				matrixdistance.Diameter = append(matrixdistance.Diameter, float64(int(diameter*100))/100)
+			}
+		}
+
+		centroids = append(centroids, matrixdistance)
+	}
+
+	for i, value := range centroids {
+		fmt.Printf("C")
+		for _, name := range value.Name {
+			fmt.Printf("%s", name)
+		}
+		fmt.Printf(" |")
+
+		for c := 0; c < i; c++ {
+			fmt.Printf("      |")
+		}
+		for _, d := range value.Diameter {
+			fmt.Printf("%5.2f |", d)
+		}
+		fmt.Printf("\n")
+	}
+
+	var (
+		smallest         float64
+		centroidname     []string
+		centroidselected []int
+	)
+
+	smallest = 100
+
+	// get smallest centroid value
+	for i, value := range centroids {
+		// fmt.Printf("%#v. length: %#v\n", i, len(value.Diameter))
+		for j, d := range value.Diameter {
+			if d <= smallest && d != 0 {
+				smallest = d
+				centroidname = nil
+				// fmt.Printf("smallest selected: %#v | %#v | %#v \n", smallest, i+1, j+1+i)
+				centroidname = append(centroidname, fmt.Sprintf("%#v", i+1))
+				centroidname = append(centroidname, fmt.Sprintf("%#v", j+1+i))
+
+				centroidselected = nil
+				centroidselected = append(centroidselected, i+1)
+				centroidselected = append(centroidselected, j+1+i)
+			}
+		}
+	}
+
+	// get nearest centroid value
+
+	// get farthest centroid value
+
+	// fmt.Printf("C%#v%#v. %#v\n", centroidname[0], centroidname[1], smallest)
+	fmt.Printf("selected centroid : %#v | %#v\n", centroidselected[0], centroidselected[1])
+
+	m.CalculateNewCentroid(m.MSTDataset[centroidselected[0]-1], m.MSTDataset[centroidselected[1]-1])
+	m.CalculateNewNearestCentroid(m.MSTDataset[centroidselected[0]-1], m.MSTDataset[centroidselected[1]-1])
+	m.CalculateNewFarthestCentroid(m.MSTDataset[centroidselected[0]-1], m.MSTDataset[centroidselected[1]-1])
+
+	// fmt.Printf("C%#v, %#v", m.MSTDataset[centroidselected[0]-1], m.MSTDataset[centroidselected[1]-1])
+
+	// m.CalculateNewTable(centroidname[0], centroidname[1])
+	// m.CalculateNewTable(2, 6)
+
+	m.Iteration++
+
+	if m.Iteration < len(m.MSTDataset) {
+
+		/* make new dataset table average distance */
+		var (
+			smallest_centroid_index int
+			newMSTDataset           [][]float64
+			newMSTNearestDataset    [][]float64
+			newMSTFarthestDataset   [][]float64
+		)
+		if centroidselected[0] < centroidselected[1] {
+			smallest_centroid_index = centroidselected[0] - 1
+		} else {
+			smallest_centroid_index = centroidselected[1] - 1
+		}
+
+		for i, ds := range m.MSTDataset {
+			if i == smallest_centroid_index {
+				// append new
+				newMSTDataset = append(newMSTDataset, m.NewCentroid)
+				newMSTNearestDataset = append(newMSTNearestDataset, m.NewNearestCentroid)
+				newMSTFarthestDataset = append(newMSTFarthestDataset, m.NewFarthestCentroid)
+			} else if i != centroidselected[0]-1 && i != centroidselected[1]-1 {
+				newMSTDataset = append(newMSTDataset, ds)
+				newMSTNearestDataset = append(newMSTNearestDataset, ds)
+				newMSTFarthestDataset = append(newMSTFarthestDataset, ds)
+			}
+		}
+
+		fmt.Println("dataset = [][]float64{")
+		for _, ds := range newMSTDataset {
+			fmt.Printf("\t{%#v, %#v},\n", ds[0], ds[1])
+		}
+		fmt.Println("}")
+
+		fmt.Println("dataset = [][]float64{")
+		for _, ds := range newMSTNearestDataset {
+			fmt.Printf("\t{%#v, %#v},\n", ds[0], ds[1])
+		}
+		fmt.Println("}")
+
+		fmt.Println("dataset = [][]float64{")
+		for _, ds := range newMSTFarthestDataset {
 			fmt.Printf("\t{%#v, %#v},\n", ds[0], ds[1])
 		}
 		fmt.Println("}")
@@ -195,6 +364,71 @@ func (m *MinimumSpanningTree) CalculateNewCentroid(centroida []float64, centroid
 
 	fmt.Printf("new centroid: %#v | %#v\n", newcentroida, newcentroidb)
 	m.NewCentroid = newcentroid
+}
+
+func (m *MinimumSpanningTree) CalculateNewNearestCentroid(centroida []float64, centroidb []float64) {
+
+	// fmt.Printf("C%#v%#v", centroida, centroidb)
+
+	var (
+		diametercentroida float64
+		diametercentroidb float64
+		newcentroida      float64
+		newcentroidb      float64
+		newcentroid       []float64
+	)
+
+	fmt.Printf("centroid a : %#v | %#v\n", centroida[0], centroida[1])
+	fmt.Printf("centroid b : %#v | %#v\n", centroidb[0], centroidb[1])
+
+	diametercentroida = (centroida[0] + centroidb[0]) / 2
+	diametercentroidb = (centroida[1] + centroidb[1]) / 2
+
+	if diametercentroida < diametercentroidb {
+		newcentroida = centroida[0]
+		newcentroidb = centroida[1]
+	} else {
+		newcentroida = centroidb[0]
+		newcentroidb = centroidb[1]
+	}
+
+	newcentroid = append(newcentroid, newcentroida)
+	newcentroid = append(newcentroid, newcentroidb)
+
+	fmt.Printf("new nearest centroid: %#v | %#v\n", newcentroida, newcentroidb)
+	m.NewNearestCentroid = newcentroid
+}
+func (m *MinimumSpanningTree) CalculateNewFarthestCentroid(centroida []float64, centroidb []float64) {
+
+	// fmt.Printf("C%#v%#v", centroida, centroidb)
+
+	var (
+		diametercentroida float64
+		diametercentroidb float64
+		newcentroida      float64
+		newcentroidb      float64
+		newcentroid       []float64
+	)
+
+	fmt.Printf("centroid a : %#v | %#v\n", centroida[0], centroida[1])
+	fmt.Printf("centroid b : %#v | %#v\n", centroidb[0], centroidb[1])
+
+	diametercentroida = (centroida[0] + centroidb[0]) / 2
+	diametercentroidb = (centroida[1] + centroidb[1]) / 2
+
+	if diametercentroida > diametercentroidb {
+		newcentroida = centroida[0]
+		newcentroidb = centroida[1]
+	} else {
+		newcentroida = centroidb[0]
+		newcentroidb = centroidb[1]
+	}
+
+	newcentroid = append(newcentroid, newcentroida)
+	newcentroid = append(newcentroid, newcentroidb)
+
+	fmt.Printf("new farthest centroid: %#v | %#v\n", newcentroida, newcentroidb)
+	m.NewFarthestCentroid = newcentroid
 }
 
 func (m *MinimumSpanningTree) CalculateNewTable(c1index int, c2index int) {
