@@ -6,18 +6,22 @@ import (
 )
 
 type MinimumSpanningTree struct {
-	MSTDataset [][]float64
-	Data       []MSTData
-}
-
-type MSTData struct {
-	Iteration int
-	Dataset   [][]float64
+	MSTDataset    [][]float64
+	Iteration     int
+	NewCentroid   []float64
+	NewMSTDataset [][]float64
 }
 
 func RunMinimumSpanningTree() {
 
-	var dataset [][]float64
+	var (
+		mstlist []MinimumSpanningTree
+		dataset [][]float64
+		mst     MinimumSpanningTree
+	)
+	mstlist = make([]MinimumSpanningTree, 0)
+
+	// iterasi pertama
 	dataset = [][]float64{
 		{1.1, 60},
 		{8.2, 20},
@@ -27,16 +31,40 @@ func RunMinimumSpanningTree() {
 		{2.0, 55},
 		{3.9, 39},
 	}
-
-	var listIteration []MSTData
-	listIteration = make([]MSTData, 0)
-
-	mst := MinimumSpanningTree{
+	mst = MinimumSpanningTree{
 		MSTDataset: dataset,
-		Data:       listIteration,
 	}
+	mstlist = append(mstlist, mst)
 
-	mst.AverageDistanceClustering()
+	// iterasi kedua
+	dataset = [][]float64{
+		{1.1, 60},
+		{8.2, 20},
+		{4.05, 37},
+		{1.5, 21},
+		{7.6, 15},
+		{2, 55},
+	}
+	mst = MinimumSpanningTree{
+		MSTDataset: dataset,
+	}
+	mstlist = append(mstlist, mst)
+
+	dataset = [][]float64{
+		{1.1, 60},
+		{7.8999999999999995, 17.5},
+		{4.05, 37},
+		{1.5, 21},
+		{2, 55},
+	}
+	mst = MinimumSpanningTree{
+		MSTDataset: dataset,
+	}
+	mstlist = append(mstlist, mst)
+
+	for _, mstdata := range mstlist {
+		mstdata.AverageDistanceClustering()
+	}
 }
 
 type MatrixDistance struct {
@@ -84,24 +112,89 @@ func (m *MinimumSpanningTree) AverageDistanceClustering() {
 	var smallest float64
 	smallest = 100
 	var centroidname []string
+	var centroidselected []int
 
 	// get smallest centroid value
 	for i, value := range centroids {
+		// fmt.Printf("%#v. length: %#v\n", i, len(value.Diameter))
 		for j, d := range value.Diameter {
 			if d <= smallest && d != 0 {
 				smallest = d
 				centroidname = nil
+				// fmt.Printf("smallest selected: %#v | %#v | %#v \n", smallest, i+1, j+1+i)
 				centroidname = append(centroidname, fmt.Sprintf("%#v", i+1))
 				centroidname = append(centroidname, fmt.Sprintf("%#v", j+1+i))
+
+				centroidselected = nil
+				centroidselected = append(centroidselected, i+1)
+				centroidselected = append(centroidselected, j+1+i)
 			}
 		}
 	}
 
-	fmt.Printf("C%#v%#v. %#v\n", centroidname[0], centroidname[1], smallest)
+	// fmt.Printf("C%#v%#v. %#v\n", centroidname[0], centroidname[1], smallest)
+	fmt.Printf("selected centroid : %#v | %#v\n", centroidselected[0], centroidselected[1])
+
+	m.CalculateNewCentroid(m.MSTDataset[centroidselected[0]-1], m.MSTDataset[centroidselected[1]-1])
+	// fmt.Printf("C%#v, %#v", m.MSTDataset[centroidselected[0]-1], m.MSTDataset[centroidselected[1]-1])
 
 	// m.CalculateNewTable(centroidname[0], centroidname[1])
-	m.CalculateNewTable(2, 6)
+	// m.CalculateNewTable(2, 6)
 
+	m.Iteration++
+
+	if m.Iteration < len(m.MSTDataset) {
+
+		/* make new dataset table */
+		var (
+			smallest_centroid_index int
+			newMSTDataset           [][]float64
+		)
+		if centroidselected[0] < centroidselected[1] {
+			smallest_centroid_index = centroidselected[0] - 1
+		} else {
+			smallest_centroid_index = centroidselected[1] - 1
+		}
+
+		for i, ds := range m.MSTDataset {
+			if i == smallest_centroid_index {
+				// append new
+				newMSTDataset = append(newMSTDataset, m.NewCentroid)
+			} else if i != centroidselected[0]-1 && i != centroidselected[1]-1 {
+				newMSTDataset = append(newMSTDataset, ds)
+			}
+		}
+
+		fmt.Println("dataset = [][]float64{")
+		for _, ds := range newMSTDataset {
+			fmt.Printf("\t{%#v, %#v},\n", ds[0], ds[1])
+		}
+		fmt.Println("}")
+	}
+
+}
+
+func (m *MinimumSpanningTree) CalculateNewCentroid(centroida []float64, centroidb []float64) {
+
+	// fmt.Printf("C%#v%#v", centroida, centroidb)
+
+	var (
+		newcentroida float64
+		newcentroidb float64
+		newcentroid  []float64
+	)
+
+	fmt.Printf("centroid a : %#v | %#v\n", centroida[0], centroida[1])
+	fmt.Printf("centroid b : %#v | %#v\n", centroidb[0], centroidb[1])
+
+	newcentroida = (centroida[0] + centroidb[0]) / 2
+	newcentroidb = (centroida[1] + centroidb[1]) / 2
+
+	newcentroid = append(newcentroid, newcentroida)
+	newcentroid = append(newcentroid, newcentroidb)
+
+	fmt.Printf("new centroid: %#v | %#v\n", newcentroida, newcentroidb)
+	m.NewCentroid = newcentroid
 }
 
 func (m *MinimumSpanningTree) CalculateNewTable(c1index int, c2index int) {
